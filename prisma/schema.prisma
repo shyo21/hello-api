@@ -18,4 +18,13 @@ model User {
   email     String   @unique
   name      String
   createdAt DateTime @default(now())
+  profile   Profile?
+}
+
+model Profile {
+  id        Int      @id @default(autoincrement())
+  bio       String
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 }

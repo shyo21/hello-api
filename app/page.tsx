@@ -6,12 +6,16 @@ interface User {
   id: number;
   email: string;
   name: string;
+  profile?: {
+    bio: string;
+  };
 }
 
 export default function Home() {
   const [users, setUsers] = useState<User[]>([]);
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
+  const [bio, setBio] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -31,11 +35,12 @@ export default function Home() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, name }),
+      body: JSON.stringify({ email, name, bio }),
     });
 
     setEmail('');
     setName('');
+    setBio('');
     fetchUsers();
   };
 
@@ -59,6 +64,13 @@ export default function Home() {
             onChange={(e) => setName(e.target.value)}
             className="border p-2 mr-2"
           />
+          <input
+            type="text"
+            placeholder="자기소개"
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            className="border p-2 mr-2"
+          />
           <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded">
             추가
           </button>
@@ -71,6 +83,7 @@ export default function Home() {
           {users.map((user) => (
             <li key={user.id} className="mb-2">
               {user.name} ({user.email})
+              {user.profile && <div className="text-sm text-gray-600">Bio: {user.profile.bio}</div>}
             </li>
           ))}
         </ul>
