@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface User {
   id: number;
@@ -46,7 +47,12 @@ export default function Home() {
 
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-bold mb-4">사용자 관리</h1>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">사용자 관리</h1>
+        <Link href="/logs" className="text-blue-500 hover:text-blue-700">
+          시스템 로그 보기 →
+        </Link>
+      </div>
       
       <form onSubmit={handleSubmit} className="mb-8">
         <div className="mb-4">

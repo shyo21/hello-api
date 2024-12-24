@@ -6,14 +6,32 @@ const prisma = new PrismaClient();
 // GET 요청 처리
 export async function GET() {
     try {
-        const users = await prisma.user.findMany({
-            include: {
-                profile: true,
-            },
+        const users = await prisma.$transaction(async (tx) => {
+            const users = await tx.user.findMany({
+                include: {
+                    profile: true,
+                },
+            });
+
+            await tx.log.create({
+                data: {
+                    action: 'GET_USERS',
+                    details: `Retrieved ${users.length} users`,
+                }
+            });
+
+            return users;
         });
+
         return NextResponse.json(users);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        await prisma.log.create({
+            data: {
+                action: 'ERROR',
+                details: `Failed to fetch users: ${errorMessage}`,
+            }
+        });
         return NextResponse.json({ error: `Failed to fetch users: ${errorMessage}` }, { status: 500 });
     }
 }
@@ -23,9 +41,7 @@ export async function POST(request: Request) {
     try {
         const body = await request.json();
         
-        // 트랜잭션 시작
         const result = await prisma.$transaction(async (tx) => {
-            // 1. 사용자 생성
             const user = await tx.user.create({
                 data: {
                     email: body.email,
@@ -33,15 +49,21 @@ export async function POST(request: Request) {
                 },
             });
 
-            // 2. 프로필 생성
             const profile = await tx.profile.create({
                 data: {
-                    bio: body.bio || '안녕하세요!', // 기본값 설정
+                    bio: body.bio || '안녕하세요!',
                     userId: user.id,
                 },
             });
 
-            // 사용자와 프로필 정보를 함께 반환
+            await tx.log.create({
+                data: {
+                    action: 'CREATE_USER',
+                    details: `Created user ${user.name} (${user.email}) with profile`,
+                    userId: user.id,
+                }
+            });
+
             return {
                 ...user,
                 profile,
@@ -51,6 +73,12 @@ export async function POST(request: Request) {
         return NextResponse.json(result);
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+        await prisma.log.create({
+            data: {
+                action: 'ERROR',
+                details: `Failed to create user: ${errorMessage}`,
+            }
+        });
         return NextResponse.json({ error: `Failed to create user: ${errorMessage}` }, { status: 500 });
     }
 } 
