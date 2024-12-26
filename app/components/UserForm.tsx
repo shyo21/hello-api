@@ -8,6 +8,7 @@ interface UserFormProps {
     setName: (name: string) => void;
     setBio: (bio: string) => void;
     handleSubmit: (e: React.FormEvent) => void;
+    isEditing?: boolean;
 }
 
 export default function UserForm({
@@ -18,6 +19,7 @@ export default function UserForm({
     setName,
     setBio,
     handleSubmit,
+    isEditing = false,
 }: UserFormProps) {
     return (
         <form onSubmit={handleSubmit} className="mb-8">
@@ -47,7 +49,7 @@ export default function UserForm({
                     type="submit"
                     className="bg-blue-500 text-white px-4 py-2 rounded"
                 >
-                    추가
+                    {isEditing ? '수정' : '추가'}
                 </button>
             </div>
         </form>
