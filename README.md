@@ -11,6 +11,7 @@ This project demonstrates how to build a web application using:
 
 - [Prisma Tutorial](#prisma-tutorial)
 - [Next.js Tutorial](#nextjs-tutorial)
+- [Query Tutorial](#query-tutorial)
 
 <br/>
 
@@ -85,9 +86,6 @@ Generate `index.ts` file to query the database and run it:
 ```bash
 npx tsx index.ts
 ```
-
-- [CRUD](https://www.prisma.io/docs/orm/prisma-client/queries/crud)
-- [Filtering&Sorting](https://www.prisma.io/docs/orm/prisma-client/queries/filtering-and-sorting#filter-conditions-and-operators)
 
 <br/>
 
@@ -175,8 +173,26 @@ prisma/
 |--schema.prisma
 ``` 
 
+<br/>
+
 ## 6. Run the app
 To run the app:  
 ```bash
 npm run dev
 ```
+
+<br/>
+
+# Query tutorial
+
+1. [CRUD](https://www.prisma.io/docs/orm/prisma-client/queries/crud)
+
+2. [Select Fields](https://www.prisma.io/docs/orm/prisma-client/queries/select-fields)
+
+3. [Relation queries](https://www.prisma.io/docs/orm/prisma-client/queries/relation-queries)
+
+4. [Filtering & Sorting](https://www.prisma.io/docs/orm/prisma-client/queries/filtering-and-sorting)
+
+5. [Pagination](https://www.prisma.io/docs/orm/prisma-client/queries/pagination)
+
+6. [Aggregation, Grouping, and summarizing](https://www.prisma.io/docs/orm/prisma-client/queries/aggregation-grouping-summarizing)
