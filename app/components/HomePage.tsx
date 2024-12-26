@@ -12,6 +12,11 @@ interface User {
         bio: string;
     } | null;
     createdAt: string;
+    logs: {
+        action: string;
+        details: string;
+        createdAt: string;
+    }[];
 }
 
 export default function HomePage() {
@@ -21,12 +26,27 @@ export default function HomePage() {
     const [users, setUsers] = useState<User[]>([]);
     const [editingUser, setEditingUser] = useState<User | null>(null);
     const [selectedFields, setSelectedFields] = useState<string[]>(['name', 'email', 'bio']);
+    const [showUserLogs, setShowUserLogs] = useState(false);
 
     const fetchUsers = async () => {
-        const fields = selectedFields.join(',');
-        const response = await fetch(`/api/users?fields=${fields}`);
-        const data = await response.json();
-        setUsers(data);
+        try {
+            const fields = ['id', ...selectedFields].join(',');
+            const withLogs = showUserLogs ? 'true' : 'false';
+            const response = await fetch(`/api/users?fields=${fields}&withProfile=true&withLogs=${withLogs}`);
+            const data = await response.json();
+
+            if (Array.isArray(data)) {
+                setUsers(data);
+            } else {
+                console.error('Unexpected API response:', data);
+                setUsers([]);
+                alert('사용자 목록을 가져오는데 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Failed to fetch users:', error);
+            setUsers([]);
+            alert('사용자 목록을 가져오는데 실패했습니다.');
+        }
     };
 
     const handleFieldToggle = (field: string) => {
@@ -41,7 +61,7 @@ export default function HomePage() {
 
     useEffect(() => {
         fetchUsers();
-    }, [selectedFields]);
+    }, [selectedFields, showUserLogs]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,44 +87,75 @@ export default function HomePage() {
             return;
         }
 
-        const response = await fetch(`/api/users?id=${userId}`, {
-            method: 'DELETE',
-        });
+        try {
+            const response = await fetch(`/api/users?id=${userId}`, {
+                method: 'DELETE',
+            });
 
-        if (response.ok) {
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || '삭제 실패');
+            }
+
             fetchUsers();
+        } catch (error) {
+            console.error('Delete error:', error);
+            alert('사용자 삭제 중 오류가 발생했습니다.');
         }
     };
 
     const handleUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editingUser) return;
 
-        const response = await fetch(`/api/users?id=${editingUser.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                email,
-                name,
-                bio,
-            }),
-        });
+        if (!editingUser) {
+            console.error('No user selected for editing');
+            alert('수정할 사용자가 선택되지 않았습니다.');
+            return;
+        }
 
-        if (response.ok) {
-            setEditingUser(null);
+        try {
+            console.log('editingUser:', editingUser);
+            console.log('editingUser.id:', editingUser.id);
+
+            const response = await fetch(`/api/users?id=${editingUser.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    id: editingUser.id,
+                    email,
+                    name,
+                    bio,
+                }),
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.error || '수정 실패');
+            }
+
+            await fetchUsers();
             setEmail('');
             setName('');
             setBio('');
-            fetchUsers();
+            setEditingUser(null);
+        } catch (error) {
+            console.error('Update error:', error);
+            alert('사용자 정보 수정 중 오류가 발생했습니다.');
         }
     };
 
     const startEditing = (user: User) => {
+        if (!user || !user.id) {
+            console.error('Invalid user object:', user);
+            return;
+        }
+
+        console.log('Starting edit for user:', user);
         setEditingUser(user);
-        setEmail(user.email);
-        setName(user.name);
+        setEmail(user.email || '');
+        setName(user.name || '');
         setBio(user.profile?.bio || '');
     };
 
@@ -147,6 +198,15 @@ export default function HomePage() {
                         />
                         자기소개
                     </label>
+                    <label className="inline-flex items-center">
+                        <input
+                            type="checkbox"
+                            checked={showUserLogs}
+                            onChange={(e) => setShowUserLogs(e.target.checked)}
+                            className="mr-2"
+                        />
+                        최근 활동 로그
+                    </label>
                 </div>
             </div>
 
@@ -162,7 +222,7 @@ export default function HomePage() {
             />
 
             <div className="mt-8 space-y-4">
-                {users.map((user) => (
+                {Array.isArray(users) && users.map((user) => (
                     <div key={user.id} className="border p-4 rounded-lg">
                         <div className="flex justify-between items-start">
                             <div>
@@ -174,6 +234,27 @@ export default function HomePage() {
                                 )}
                                 {selectedFields.includes('bio') && user.profile && (
                                     <p className="mt-2">{user.profile.bio}</p>
+                                )}
+
+                                {showUserLogs && user.logs && user.logs.length > 0 && (
+                                    <div className="mt-4 border-t pt-2">
+                                        <h3 className="text-sm font-semibold mb-2">최근 활동:</h3>
+                                        <ul className="text-sm space-y-1">
+                                            {user.logs.map((log) => (
+                                                <li
+                                                    key={`${user.id}-${log.createdAt}`}
+                                                    className="text-gray-600"
+                                                >
+                                                    <span className="font-medium">{log.action}</span>
+                                                    <span className="mx-1">-</span>
+                                                    <span>{log.details}</span>
+                                                    <span className="text-gray-400 ml-2">
+                                                        {new Date(log.createdAt).toLocaleString()}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
                                 )}
                             </div>
                             <div className="space-x-2">

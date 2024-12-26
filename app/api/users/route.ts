@@ -8,39 +8,61 @@ export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
         const fields = searchParams.get('fields')?.split(',') || ['id', 'name', 'email'];
+        const withProfile = searchParams.get('withProfile') === 'true';
+        const withLogs = searchParams.get('withLogs') === 'true';
         
         // 기본 select 객체 생성
-        const selectFields: Record<string, boolean> = {};
+        const selectFields: Record<string, boolean | object> = {};
         fields.forEach(field => {
             if (['id', 'name', 'email', 'createdAt'].includes(field)) {
                 selectFields[field] = true;
             }
         });
 
-        // profile이 포함되어 있는지 확인
-        const includeProfile = fields.includes('bio');
+        // 관계 쿼리 설정
+        if (withProfile) {
+            selectFields.profile = {
+                select: {
+                    bio: true,
+                    createdAt: true,
+                }
+            };
+        }
+
+        if (withLogs) {
+            selectFields.logs = {
+                select: {
+                    action: true,
+                    details: true,
+                    createdAt: true,
+                },
+                orderBy: {
+                    createdAt: 'desc'
+                },
+                take: 5 // 최근 5개의 로그만 가져오기
+            };
+        }
 
         const users = await prisma.$transaction(async (tx) => {
-            const users = await tx.user.findMany({
-                select: {
-                    ...selectFields,
-                    // bio가 요청되었을 때만 profile 포함
-                    profile: includeProfile ? {
-                        select: {
-                            bio: true
-                        }
-                    } : false
-                }
-            });
+            try {
+                const users = await tx.user.findMany({
+                    select: selectFields,
+                    orderBy: {
+                        createdAt: 'desc'
+                    }
+                });
 
-            await tx.log.create({
-                data: {
-                    action: 'GET_USERS',
-                    details: `Retrieved ${users.length} users with fields: ${fields.join(', ')}`,
-                }
-            });
+                await tx.log.create({
+                    data: {
+                        action: 'GET_USERS',
+                        details: `Retrieved ${users.length} users with fields: ${fields.join(', ')}`,
+                    }
+                });
 
-            return users;
+                return users;
+            } catch (error) {
+                throw error; // 트랜잭션 롤백을 위해 에러를 다시 던짐
+            }
         });
 
         return NextResponse.json(users);
@@ -52,7 +74,12 @@ export async function GET(request: Request) {
                 details: `Failed to fetch users: ${errorMessage}`,
             }
         });
-        return NextResponse.json({ error: `Failed to fetch users: ${errorMessage}` }, { status: 500 });
+        // 명확한 에러 응답 구조
+        return NextResponse.json({ 
+            error: true,
+            message: `Failed to fetch users: ${errorMessage}`,
+            users: [] 
+        }, { status: 500 });
     }
 }
 
@@ -113,29 +140,46 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
+        const userId = parseInt(id);
+
         const result = await prisma.$transaction(async (tx) => {
-            // 프로필 먼저 삭제 (외래 키 제약조건 때문)
-            await tx.profile.delete({
-                where: { userId: parseInt(id) }
+            // 먼저 사용자가 존재하는지 확인
+            const existingUser = await tx.user.findUnique({
+                where: { id: userId },
+                include: { profile: true }
             });
 
-            const user = await tx.user.delete({
-                where: { id: parseInt(id) }
-            });
+            if (!existingUser) {
+                throw new Error('User not found');
+            }
 
+            // 삭제 전에 로그 생성
             await tx.log.create({
                 data: {
                     action: 'DELETE_USER',
-                    details: `Deleted user ${user.name} (${user.email})`,
-                    userId: parseInt(id)
+                    details: `Deleting user ${existingUser.name} (${existingUser.email})`,
+                    userId: userId
                 }
             });
 
-            return user;
+            // 프로필이 있는 경우에만 삭제
+            if (existingUser.profile) {
+                await tx.profile.delete({
+                    where: { userId: userId }
+                });
+            }
+
+            // 마지막으로 사용자 삭제
+            const deletedUser = await tx.user.delete({
+                where: { id: userId }
+            });
+
+            return deletedUser;
         });
 
         return NextResponse.json(result);
     } catch (error) {
+        console.error('Delete error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         await prisma.log.create({
             data: {
@@ -158,36 +202,47 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
+        const userId = parseInt(id);
+
         const result = await prisma.$transaction(async (tx) => {
+            // 먼저 사용자 업데이트
             const user = await tx.user.update({
-                where: { id: parseInt(id) },
+                where: { id: userId },
                 data: {
                     name: body.name,
                     email: body.email,
-                    profile: {
-                        update: {
-                            bio: body.bio
-                        }
-                    }
                 },
-                include: {
-                    profile: true
-                }
+            });
+
+            // 그 다음 프로필 업데이트 또는 생성
+            const profile = await tx.profile.upsert({
+                where: { userId: userId },
+                create: {
+                    bio: body.bio,
+                    userId: userId,
+                },
+                update: {
+                    bio: body.bio,
+                },
             });
 
             await tx.log.create({
                 data: {
                     action: 'UPDATE_USER',
                     details: `Updated user ${user.name} (${user.email})`,
-                    userId: parseInt(id)
+                    userId: userId
                 }
             });
 
-            return user;
+            return {
+                ...user,
+                profile,
+            };
         });
 
         return NextResponse.json(result);
     } catch (error) {
+        console.error('Update error:', error);
         const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         await prisma.log.create({
             data: {
