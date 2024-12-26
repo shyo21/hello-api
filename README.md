@@ -138,17 +138,44 @@ npx prisma generate
 <br/>
 
 ## 3. Implement API routes
-Under the `app` directory, create a new `api` directory and implement the API routes in the `route.ts` file.  
+Under the `/app` directory, create a new `/api` directory and implement the API routes in the `route.ts` file.  
 
 <br/>
 
 ## 4. Implement Client Components
-Under the `app` directory, create a new `components` directory and implement the client components in the `my-component.tsx` file.  
-Implement the styles in the `globals.css` file.
+Under the `/app` directory, create `layout.tsx`, `page.tsx`, `globals.css` files.  
+
+Create a new `/components` directory and implement the client components in the `your-component-name.tsx` file.  
+
+To implement new page, create a new `/your-page-name` directory and implement the page in the `page.tsx` file.  
 
 <br/>
 
-## 5. Run the app
+## 5. Project Structure
+```
+app/
+|--api/
+|   |--route.ts
+|
+|--components/
+|   |--component1.tsx
+|   |--component2.tsx
+|
+|--logs/
+|   |--page.tsx
+|
+|--page.tsx
+|--layout.tsx
+|--globals.css
+
+prisma/
+|--migration/
+|   |--migration-name.ts
+|
+|--schema.prisma
+``` 
+
+## 6. Run the app
 To run the app:  
 ```bash
 npm run dev
