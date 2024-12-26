@@ -4,19 +4,39 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 // GET 요청 처리
-export async function GET() {
+export async function GET(request: Request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const fields = searchParams.get('fields')?.split(',') || ['id', 'name', 'email'];
+        
+        // 기본 select 객체 생성
+        const selectFields: Record<string, boolean> = {};
+        fields.forEach(field => {
+            if (['id', 'name', 'email', 'createdAt'].includes(field)) {
+                selectFields[field] = true;
+            }
+        });
+
+        // profile이 포함되어 있는지 확인
+        const includeProfile = fields.includes('bio');
+
         const users = await prisma.$transaction(async (tx) => {
             const users = await tx.user.findMany({
-                include: {
-                    profile: true,
-                },
+                select: {
+                    ...selectFields,
+                    // bio가 요청되었을 때만 profile 포함
+                    profile: includeProfile ? {
+                        select: {
+                            bio: true
+                        }
+                    } : false
+                }
             });
 
             await tx.log.create({
                 data: {
                     action: 'GET_USERS',
-                    details: `Retrieved ${users.length} users`,
+                    details: `Retrieved ${users.length} users with fields: ${fields.join(', ')}`,
                 }
             });
 

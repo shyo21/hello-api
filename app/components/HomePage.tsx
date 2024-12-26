@@ -20,16 +20,28 @@ export default function HomePage() {
     const [bio, setBio] = useState('');
     const [users, setUsers] = useState<User[]>([]);
     const [editingUser, setEditingUser] = useState<User | null>(null);
-
-    useEffect(() => {
-        fetchUsers();
-    }, []);
+    const [selectedFields, setSelectedFields] = useState<string[]>(['name', 'email', 'bio']);
 
     const fetchUsers = async () => {
-        const response = await fetch('/api/users');
+        const fields = selectedFields.join(',');
+        const response = await fetch(`/api/users?fields=${fields}`);
         const data = await response.json();
         setUsers(data);
     };
+
+    const handleFieldToggle = (field: string) => {
+        setSelectedFields(prev => {
+            if (prev.includes(field)) {
+                return prev.filter(f => f !== field);
+            } else {
+                return [...prev, field];
+            }
+        });
+    };
+
+    useEffect(() => {
+        fetchUsers();
+    }, [selectedFields]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,6 +117,39 @@ export default function HomePage() {
                 </Link>
             </div>
 
+            <div className="mb-4 p-4 border rounded">
+                <h2 className="font-semibold mb-2">표시할 필드 선택:</h2>
+                <div className="space-x-4">
+                    <label className="inline-flex items-center">
+                        <input
+                            type="checkbox"
+                            checked={selectedFields.includes('name')}
+                            onChange={() => handleFieldToggle('name')}
+                            className="mr-2"
+                        />
+                        이름
+                    </label>
+                    <label className="inline-flex items-center">
+                        <input
+                            type="checkbox"
+                            checked={selectedFields.includes('email')}
+                            onChange={() => handleFieldToggle('email')}
+                            className="mr-2"
+                        />
+                        이메일
+                    </label>
+                    <label className="inline-flex items-center">
+                        <input
+                            type="checkbox"
+                            checked={selectedFields.includes('bio')}
+                            onChange={() => handleFieldToggle('bio')}
+                            className="mr-2"
+                        />
+                        자기소개
+                    </label>
+                </div>
+            </div>
+
             <UserForm
                 email={email}
                 name={name}
@@ -121,9 +166,13 @@ export default function HomePage() {
                     <div key={user.id} className="border p-4 rounded-lg">
                         <div className="flex justify-between items-start">
                             <div>
-                                <h2 className="font-semibold">{user.name}</h2>
-                                <p className="text-gray-600">{user.email}</p>
-                                {user.profile && (
+                                {selectedFields.includes('name') && (
+                                    <h2 className="font-semibold">{user.name}</h2>
+                                )}
+                                {selectedFields.includes('email') && (
+                                    <p className="text-gray-600">{user.email}</p>
+                                )}
+                                {selectedFields.includes('bio') && user.profile && (
                                     <p className="mt-2">{user.profile.bio}</p>
                                 )}
                             </div>
