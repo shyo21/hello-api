@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Introduction
+Reconnect onboarding project using Prisma and Next.js
 
-## Getting Started
+<br/>
 
-First, run the development server:
+# Getting Started
 
+This project demonstrates how to build a web application using:
+- [Prisma](https://www.prisma.io/) - Next-generation ORM
+- [Next.js](https://nextjs.org/) - React framework for production
+
+<br/>
+
+# Prisma Tutorial
+
+## 1. Setup
+
+First, create a new project directory and initialize it:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm init -y
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Install required dependencies:
+```bash
+npm install prisma typescript tsx @types/node@19 --save-dev
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Initialize TypeScript configuration:
+```bash
+npx tsc --init
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Initialize Prisma:
+```bash
+npx prisma init
+```
 
-## Learn More
+## 2. Connect to the Database
+modify the `.env` file to include your database connection string:  
+```bash
+DATABASE_URL="postgresql://your_username:your_password@localhost:5432/your_database_name"
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 3. Define the Data Model
+In the `schema.prisma` file, define the data model for your application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 4. Map the Data Model to the Database
+To generate and apply migrations while keeping change history:  
+```bash
+npx prisma migrate dev
+```
+- Use case - For production environments needing version-controlled schema changes
+- Benefits - Keeps track of schema changes, allows for easy rollback, and provides a history of changes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+<br/>
 
-## Deploy on Vercel
+To directly apply the migration to the database:  
+```bash
+npx prisma db push
+```
+- Use case - For quick schema changes without version control
+- Benefits - Best for prototyping as it may overwrite existing data
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 5. 
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
