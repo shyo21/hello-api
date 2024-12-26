@@ -119,7 +119,7 @@ npm install next@14.2.3 react@18.3.1 react-dom@18.3.1
 
 Install required dependencies:  
 ```bash
-npm install @types/react@18 @types/react-dom@18 --save-dev
+npm install @types/node @types/react@18 @types/react-dom@18 --save-dev
 ```
 
 <br/>
